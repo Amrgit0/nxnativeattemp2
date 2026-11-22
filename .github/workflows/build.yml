@@ -38,7 +38,7 @@ jobs:
 
       - name: Build with nxnative
         run: |
-          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --platform mac-app --allow-other-metal
+          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --platform mac-app --allow-other-metal --gpu none
 
       - name: Check generated artifacts
         if: always()
