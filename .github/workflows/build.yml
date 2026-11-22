@@ -36,6 +36,14 @@ jobs:
           ls -lh "$HOME/Games/Mina/game.nup"
           file "$HOME/Games/Mina/game.nup"
 
+      - name: Restore shader and build cache
+        uses: actions/cache@v4
+        with:
+          path: /Users/runner/Games/Mina/*_build
+          key: pokopia-ios-${{ runner.os }}-build-v1
+          restore-keys: |
+            pokopia-ios-${{ runner.os }}-build-
+
       - name: Build and package IPA with nxnative
         run: |
           python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --allow-other-metal --gpu none
