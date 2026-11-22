@@ -1,0 +1,60 @@
+name: Build Switch IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: xcode-27
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          brew install xcodegen zstd glslang
+          python3 -m pip install --upgrade pip lz4 "capstone>=5,<6" fonttools zbic backports.zstd
+          if [ -f requirements.txt ]; then
+            python3 -m pip install -r requirements.txt
+          fi
+
+      - name: Prepare prod.keys
+        run: |
+          mkdir -p "$HOME/Keys"
+          printf "%s\n" "${{ secrets.PROD_KEYS }}" > "$HOME/Keys/prod.keys"
+
+      - name: Download NSP
+        run: |
+          mkdir -p "$HOME/Games"
+          curl -fSL --retry 3 --retry-delay 5 "${{ secrets.NSP_URL }}" -o "$HOME/Games/game.nsp"
+          ls -lh "$HOME/Games/game.nsp"
+          file "$HOME/Games/game.nsp"
+
+      - name: Build IPA with nxnative
+        run: |
+          mkdir -p "$HOME/Games/Mina"
+          mv "$HOME/Games/game.nsp" "$HOME/Games/Mina/game.nsp"
+          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina" -k "$HOME/Keys/prod.keys" --allow-other-metal
+
+      - name: Check generated IPA files
+        if: always()
+        run: |
+          ls -lh /Users/runner/Games/Mina/*.ipa 2>/dev/null || true
+
+      - name: Upload IPA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nxnative-ipa
+          path: |
+            /Users/runner/Games/Mina/*.ipa
+            **/*.ipa
+            !**/Build/**
+            /Users/runner/Games/Mina/**/*survey*/survey.md
+            /Users/runner/Games/Mina/*_build/logs/*.log
