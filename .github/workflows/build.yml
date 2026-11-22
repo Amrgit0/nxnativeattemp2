@@ -25,7 +25,6 @@ jobs:
           fi
 
       - name: Prepare prod.keys
-        if: ${{ secrets.PROD_KEYS != '' }}
         run: |
           mkdir -p "$HOME/Keys"
           printf "%s\n" "${{ secrets.PROD_KEYS }}" > "$HOME/Keys/prod.keys"
