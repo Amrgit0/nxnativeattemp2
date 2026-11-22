@@ -25,35 +25,35 @@ jobs:
           fi
 
       - name: Prepare prod.keys
+        if: ${{ secrets.PROD_KEYS != '' }}
         run: |
           mkdir -p "$HOME/Keys"
           printf "%s\n" "${{ secrets.PROD_KEYS }}" > "$HOME/Keys/prod.keys"
 
-      - name: Download NSP
-        run: |
-          mkdir -p "$HOME/Games"
-          curl -fSL --retry 3 --retry-delay 5 "${{ secrets.NSP_URL }}" -o "$HOME/Games/game.nsp"
-          ls -lh "$HOME/Games/game.nsp"
-          file "$HOME/Games/game.nsp"
-
-      - name: Build IPA with nxnative
+      - name: Download game container (.nup)
         run: |
           mkdir -p "$HOME/Games/Mina"
-          mv "$HOME/Games/game.nsp" "$HOME/Games/Mina/game.nsp"
-          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina" -k "$HOME/Keys/prod.keys" --allow-other-metal
+          curl -fSL --retry 3 --retry-delay 5 "${{ secrets.NSP_URL }}" -o "$HOME/Games/Mina/game.nup"
+          ls -lh "$HOME/Games/Mina/game.nup"
+          file "$HOME/Games/Mina/game.nup"
 
-      - name: Check generated IPA files
+      - name: Build with nxnative
+        run: |
+          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --platform mac-app --allow-other-metal
+
+      - name: Check generated artifacts
         if: always()
         run: |
-          ls -lh /Users/runner/Games/Mina/*.ipa 2>/dev/null || true
+          ls -lh /Users/runner/Games/Mina/*.ipa /Users/runner/Games/Mina/*.app 2>/dev/null || true
 
-      - name: Upload IPA artifact
+      - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nxnative-ipa
+          name: nxnative-build
           path: |
             /Users/runner/Games/Mina/*.ipa
+            /Users/runner/Games/Mina/*.app
             **/*.ipa
             !**/Build/**
             /Users/runner/Games/Mina/**/*survey*/survey.md
