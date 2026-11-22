@@ -36,9 +36,12 @@ jobs:
           ls -lh "$HOME/Games/Mina/game.nup"
           file "$HOME/Games/Mina/game.nup"
 
-      - name: Build with nxnative
+      - name: Build and package IPA with nxnative
         run: |
-          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --platform mac-app --allow-other-metal --gpu none
+          python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --allow-other-metal --gpu none
+          mkdir -p "$HOME/Games/Mina/Payload"
+          find "$HOME/Games/Mina" -maxdepth 2 -name "*.app" -exec mv {} "$HOME/Games/Mina/Payload/" \;
+          (cd "$HOME/Games/Mina" && zip -r -y "game.ipa" Payload)
 
       - name: Check generated artifacts
         if: always()
