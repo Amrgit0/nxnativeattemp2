@@ -18,7 +18,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          brew install xcodegen zstd glslang
+          brew install xcodegen zstd glslang aria2
           python3 -m pip install --upgrade pip lz4 "capstone>=5,<6" fonttools zbic backports.zstd
           if [ -f requirements.txt ]; then
             python3 -m pip install -r requirements.txt
@@ -32,7 +32,18 @@ jobs:
       - name: Download game container (.nup)
         run: |
           mkdir -p "$HOME/Games/Mina"
-          curl -fSL --retry 3 --retry-delay 5 "${{ secrets.NSP_URL }}" -o "$HOME/Games/Mina/game.nup"
+          aria2c \
+            --max-connection-per-server=16 \
+            --split=16 \
+            --min-split-size=16M \
+            --continue=true \
+            --max-tries=5 \
+            --retry-wait=5 \
+            --user-agent="Mozilla/5.0" \
+            -d "$HOME/Games/Mina" \
+            -o "game.nup" \
+            "${{ secrets.NSP_URL }}" || \
+            curl -fSL --retry 3 --retry-delay 5 "${{ secrets.NSP_URL }}" -o "$HOME/Games/Mina/game.nup"
           ls -lh "$HOME/Games/Mina/game.nup"
           file "$HOME/Games/Mina/game.nup"
 
