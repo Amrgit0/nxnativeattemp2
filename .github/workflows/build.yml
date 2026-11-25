@@ -2,6 +2,12 @@ name: Build Switch IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      game_id:
+        description: "Game identifier or Title ID for build cache isolation (e.g. starfox or 0400E88025B1A000)"
+        required: false
+        default: "default"
+        type: string
 
 jobs:
   build-ipa:
@@ -15,6 +21,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Free up runner disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h / /Users/runner
+          sudo rm -rf /Library/Developer/CoreSimulator/Caches/dyld/* 2>/dev/null || true
+          rm -rf /Users/runner/Library/Caches/Homebrew/* 2>/dev/null || true
+          brew cleanup -s 2>/dev/null || true
+          echo "Disk space after cleanup:"
+          df -h / /Users/runner
 
       - name: Install build dependencies
         run: |
@@ -51,16 +67,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /Users/runner/Games/Mina/*_build
-          key: pokopia-ios-${{ runner.os }}-build-v1
+          key: nxnative-ios-${{ runner.os }}-${{ inputs.game_id }}-build-v1
           restore-keys: |
-            pokopia-ios-${{ runner.os }}-build-
+            nxnative-ios-${{ runner.os }}-${{ inputs.game_id }}-build-
 
       - name: Build and package IPA with nxnative
         run: |
           python3 scripts/build_ipa_from_nsp.py "$HOME/Games/Mina/game.nup" --allow-other-metal --gpu none
+          rm -f "$HOME/Games/Mina/game.nup"
           mkdir -p "$HOME/Games/Mina/Payload"
           find "$HOME/Games/Mina" -maxdepth 2 -name "*.app" -exec mv {} "$HOME/Games/Mina/Payload/" \;
           (cd "$HOME/Games/Mina" && zip -r -y "game.ipa" Payload)
+
+      - name: Save shader and build cache on failure
+        if: failure()
+        uses: actions/cache@v4
+        with:
+          path: /Users/runner/Games/Mina/*_build
+          key: nxnative-ios-${{ runner.os }}-${{ inputs.game_id }}-build-v1
 
       - name: Check generated artifacts
         if: always()
